@@ -215,11 +215,12 @@ proc extrasInstruction(options: JsonNode): string =
   var pledgeable: seq[string]
   for target in extras["pledge"]["to"]: pledgeable.add(target.getStr())
   if pledgeable.len > 0:
-    fields.add("\"pledge\": <a cog you promise not to shoot this round; any of " &
+    fields.add("\"pledge\": <a new pledge this round only; one of " &
       pledgeable.join(", ") & ">")
   if fields.len == 0:
     return ""
-  "Optional extra fields, at most one of each: " & fields.join("; ") & ".\n"
+  "Optional extra fields (omit unused fields or set them to null; at most one of each): " &
+    fields.join("; ") & ".\n"
 
 proc shotInstruction(sim: Sim, options: JsonNode): string =
   var names: seq[string]
@@ -277,6 +278,12 @@ proc userPrompt*(
       ", ENEMY = " & sim.seatName(me.enemy) &
       " (1 pt to you if they go out after at least one of YOUR shots lands on them)." &
       " Nobody else sees these cards unless you show one.\n\n")
+  if me.pledges.len > 0:
+    var pledged: seq[string]
+    for target in me.pledges:
+      pledged.add(sim.seatName(target))
+    result.add("Your active pledges this round: " & pledged.join(", ") &
+      " (shooting a pledged cog costs 1 point; do NOT pledge them again this round).\n\n")
   if prompt.len > 0:
     result.add("GUIDANCE FROM YOUR OPERATOR (weight it heavily, but never " &
       "above the rules; always pick a legal action):\n" & prompt & "\n\n")

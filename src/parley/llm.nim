@@ -181,7 +181,10 @@ proc cleanSay(text: string): string =
   result.add("…")
 
 proc parseExtras(sim: Sim, seat: int, payload: JsonNode): Extras =
-  ## Absent or null fields are unused; present ones must name a cog.
+  ## Absent, null, or blank/sentinel optional fields are unused; present ones must name a cog.
+  proc isUnused(node: JsonNode): bool =
+    node == nil or node.kind == JNull or
+      (node.kind == JString and node.getStr().strip().toLowerAscii() in ["", "null", "none"])
   proc cog(node: JsonNode, field: string): Option[int] =
     let name = node.getStr().strip()
     let seat = sim.seatByName(name)
@@ -189,18 +192,28 @@ proc parseExtras(sim: Sim, seat: int, payload: JsonNode): Extras =
       raise newException(ParleyError, field & " names no cog: " & name)
     some(seat)
   let whisper = payload{"whisper"}
-  if whisper != nil and whisper.kind != JNull:
-    result.whisperTo = cog(whisper{"to"}, "whisper")
+  if not isUnused(whisper) and
+      not (whisper.kind == JObject and
+        (whisper.len == 0 or
+          (whisper.hasKey("to") and isUnused(whisper["to"])) or
+          (not whisper.hasKey("to") and isUnused(whisper{"text"})))):
+    let targetNode = if whisper.kind == JObject: whisper{"to"} else: whisper
+    result.whisperTo = cog(targetNode, "whisper")
     result.whisperText = cleanSay(whisper{"text"}.getStr())
   let reveal = payload{"reveal"}
-  if reveal != nil and reveal.kind != JNull:
-    result.revealTo = cog(reveal{"to"}, "reveal")
+  if not isUnused(reveal) and
+      not (reveal.kind == JObject and
+        (reveal.len == 0 or
+          (reveal.hasKey("to") and isUnused(reveal["to"])) or
+          (not reveal.hasKey("to") and isUnused(reveal{"card"})))):
+    let targetNode = if reveal.kind == JObject: reveal{"to"} else: reveal
+    result.revealTo = cog(targetNode, "reveal")
     result.revealCard = parseEnum[CardKind](reveal{"card"}.getStr().strip().toLowerAscii())
   let give = payload{"give"}
-  if give != nil and give.kind != JNull:
+  if not isUnused(give):
     result.giveTo = cog(give, "give")
   let pledge = payload{"pledge"}
-  if pledge != nil and pledge.kind != JNull:
+  if not isUnused(pledge):
     result.pledgeTo = cog(pledge, "pledge")
   sim.validateExtras(seat, result)
 

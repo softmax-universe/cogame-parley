@@ -94,6 +94,99 @@ suite "scripted seat randomness":
     check "shows " & name & " one of their cards" in view
     check "spare me" in userPrompt(match.decisionSim(), other, "", match.sim.actionOptions(other, false), "")
 
+  test "blank and null-sentinel strings on optional extras are treated as unused":
+    var config = defaultGameConfig()
+    for seat in 0 ..< 4:
+      config.players.add(PlayerConfig(name: "P" & $seat))
+    let sim = initSim(config)
+    let seat = sim.itSeat
+    for sentinel in ["", "  ", "null", "NULL", "none", "None"]:
+      let decision = parseDecision(sim, seat, %*{
+        "say": "steady",
+        "shoot": "pass",
+        "pledge": sentinel,
+        "give": sentinel,
+        "whisper": sentinel,
+        "reveal": sentinel
+      }, true)
+      check decision.skip
+      check decision.extras.pledgeTo.isNone
+      check decision.extras.giveTo.isNone
+      check decision.extras.whisperTo.isNone
+      check decision.extras.revealTo.isNone
+
+      let nested = parseDecision(sim, seat, %*{
+        "say": "steady",
+        "shoot": "pass",
+        "whisper": {"to": sentinel, "text": ""},
+        "reveal": {"to": sentinel, "card": "friend"}
+      }, true)
+      check nested.extras.whisperTo.isNone
+      check nested.extras.revealTo.isNone
+
+    let nullNested = parseDecision(sim, seat, %*{
+      "say": "steady",
+      "shoot": "pass",
+      "whisper": {"to": newJNull(), "text": ""},
+      "reveal": {"to": newJNull(), "card": "enemy"}
+    }, true)
+    check nullNested.extras.whisperTo.isNone
+    check nullNested.extras.revealTo.isNone
+
+    for field in ["pledge", "give", "whisper", "reveal"]:
+      var bad = %*{"say": "steady", "shoot": "pass"}
+      bad[field] = %"Bogus"
+      expect ParleyError:
+        discard parseDecision(sim, seat, bad, true)
+
+    expect ParleyError:
+      discard parseDecision(sim, seat, %*{
+        "say": "steady", "shoot": "pass",
+        "whisper": {"text": "missing recipient"}
+      }, true)
+    expect ParleyError:
+      discard parseDecision(sim, seat, %*{
+        "say": "steady", "shoot": "pass",
+        "whisper": {"to": "Bogus", "text": "hi"}
+      }, true)
+    expect ParleyError:
+      discard parseDecision(sim, seat, %*{
+        "say": "steady", "shoot": "pass",
+        "reveal": {"to": "Bogus", "card": "friend"}
+      }, true)
+
+  test "userPrompt displays active round pledges and resets them next round":
+    var config = defaultGameConfig()
+    config.rounds = 2
+    config.hitPoints = 1
+    for seat in 0 ..< 4:
+      config.players.add(PlayerConfig(name: "P" & $seat))
+    var match = initMatch(config)
+    let seat = match.sim.itSeat
+    let firstTarget = (seat + 1) mod 4
+    let secondTarget = (seat + 2) mod 4
+    let initialPrompt = userPrompt(match.decisionSim(), seat, "",
+      match.sim.actionOptions(seat, true), match.matchHeader())
+    check "Your active pledges this round:" notin initialPrompt
+    check "omit unused fields or set them to null" in initialPrompt
+    check "new pledge this round only" in initialPrompt
+
+    match.sim.applyExtras(seat, Extras(pledgeTo: some(firstTarget)))
+    match.sim.applyExtras(seat, Extras(pledgeTo: some(secondTarget)))
+    let pledgedNames = match.sim.seats[firstTarget].name & ", " &
+      match.sim.seats[secondTarget].name
+    let pledgedPrompt = userPrompt(match.decisionSim(), seat, "",
+      match.sim.actionOptions(seat, true), match.matchHeader())
+    check ("Your active pledges this round: " & pledgedNames &
+      " (shooting a pledged cog costs 1 point; do NOT pledge them again this round).") in pledgedPrompt
+
+    while not match.sim.done:
+      match.sim.applyShot(match.sim.itSeat, match.sim.validTargets(match.sim.itSeat)[0])
+    match.finishRound()
+    let nextRoundPrompt = userPrompt(match.decisionSim(), seat, "",
+      match.sim.actionOptions(seat, seat == match.sim.itSeat), match.matchHeader())
+    check "Your active pledges this round:" notin nextRoundPrompt
+
   test "scripted baselines aim where they say":
     var config = defaultGameConfig()
     config.seed = 4

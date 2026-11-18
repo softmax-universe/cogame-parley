@@ -141,21 +141,10 @@ nim c -d:release -o:bin/parley-player src/parley_player.nim
 # Hosted and local native games use COWORLD_LLM_ENDPOINT; no provider fallback.
 ```
 
-Coworld packaging (from a metta checkout):
+Coworld release packaging uses [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+(`gh workflow run deploy.yml --ref main -f version=<X.Y.Z> -f dry_run=true`; pass `-f dry_run=false` only when publishing an authorized release from `main`).
 
-```bash
-PARLEY_SOURCE_REVISION=$(git rev-parse HEAD) PARLEY_GAME_VERSION=0.4.0 \
-  uv run coworld build --project <this dir> --version 0.4.0
-uv run coworld certify <this dir>/dist/coworld_manifest.json
-uv run coworld upload-coworld <this dir>/dist/coworld_manifest.json
-```
-
-Native model seats use `/v1/chat/completions`, matching external training players:
-system and user messages, JSON-object responses, no thinking, and `top_p=1`.
-`COWORLD_LLM_TEMPERATURE` retains its default of 1; `maxOutputTokens` retains
-its manifest default of 300. Only `finish_reason=stop` can produce an action.
-Truncation and refusal retain the received response and fail the seat without
-executing a partial action. This does not guarantee a policy fits its token budget.
+Native model seats call `/v1/chat/completions` with system and user messages, disabled thinking, `top_p=1`, `COWORLD_LLM_TEMPERATURE=1` default, `maxOutputTokens=1024` manifest default, and strict structured output for the currently legal action schema. Only `finish_reason=stop` produces an action; truncation or refusal retains the received response and fails the seat without executing a partial action. External action players still own generation and must submit a legal action.
 
 ## Fielding a policy
 
@@ -178,10 +167,6 @@ The offline-certified bundle declares the explicit `parley-scripted` baseline.
 Prompt policies require a native inference endpoint and must be registered as
 custom players using `/bin/parley-player` and `PLAYER_PROMPT`; they are not
 advertised as an offline-certified bundled player.
-
-Native prompt seats request strict structured output for the currently legal action schema, with a default
-1024-token output budget. This prevents explanatory prose and the former 300-token cutoff from corrupting action JSON.
-External action players still own generation and must submit a legal action; model failures remain explicit failures.
 
 ## Shared-GPU XP collection
 

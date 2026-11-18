@@ -123,7 +123,7 @@ identities plus actual sampled-token likelihoods. Greedy completions do not supp
 Native prompt policies and external training players use Chat Completions with
 the same system/user messages, JSON response format, and disabled thinking.
 Freeze temperature and output limits explicitly when comparing policies; native
-manifest defaults remain temperature 1 and 300 output tokens. A non-`stop`
+manifest defaults remain temperature 1 and 1024 output tokens. A non-`stop`
 completion is failed evidence, even when its partial content parses as JSON.
 Earlier Anthropic Messages receipts remain historical evidence in their original format.
 

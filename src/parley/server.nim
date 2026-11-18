@@ -40,6 +40,7 @@ import
   llm,
   prompts,
   sim
+from std/unicode import validateUtf8
 
 const
   MaxPromptLen = 4000
@@ -880,11 +881,16 @@ proc websocketHandler(
           return
         if payload{"type"}.getStr() == "prompt":
           var prompt = payload{"prompt"}.getStr()
+          if validateUtf8(prompt) != -1:
+            raise newException(ParleyError, "operator prompt is not valid UTF-8")
           let scripted = payload{"scripted"}.getBool()
           ## Images built before baselines existed send no baseline: random.
           let baseline = parseEnum[Baseline](payload{"baseline"}.getStr($blRandom))
           if prompt.len > MaxPromptLen:
             prompt = prompt[0 ..< MaxPromptLen]
+            let bad = validateUtf8(prompt)
+            if bad >= 0:
+              prompt.setLen(bad)
           withLock stateLock:
             if state.started or state.stopping or state.finished or state.policies[slot].kind == pkExternal:
               raise newException(ParleyError, "player control is frozen after registration or gameplay begins")

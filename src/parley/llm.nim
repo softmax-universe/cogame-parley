@@ -166,6 +166,8 @@ proc actionSchema*(options: JsonNode): JsonNode =
   %*{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
 
 proc cleanSay(text: string): string =
+  if validateUtf8(text) != -1:
+    raise newException(ParleyError, "speech is not valid UTF-8")
   result = text.strip()
   if result.len <= MaxSayLen:
     return
@@ -173,8 +175,9 @@ proc cleanSay(text: string): string =
   ## the cut marked — a silent mid-word slice reads as a bug at the table.
   result = result[0 ..< MaxSayLen - 3]
   ## Never leave a UTF-8 code point split by the byte slice.
-  while result.len > 0 and (result[^1].ord and 0xC0) == 0x80:
-    result.setLen(result.len - 1)
+  let bad = validateUtf8(result)
+  if bad >= 0:
+    result.setLen(bad)
   let space = result.rfind(' ')
   if space > MaxSayLen div 2:
     result.setLen(space)

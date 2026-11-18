@@ -72,9 +72,13 @@ for mode in ["accepted", "invalid-response", "truncated-response", "inference-un
             seat_calls[slot] += 1
             target = re.search(r'<one of "([^"]+)"', user)
             action = {"say": "fixture public speech"}
+            if mode == "accepted" and len(requests) == 0:
+                action["say"] = ("A" * 155) + "——"
+            elif mode == "accepted" and len(requests) == 1:
+                action["say"] = ("A" * 154) + "———"
             if target:
                 action.update(shoot=target[1], aim="head")
-            raw = json.dumps(action, separators=(",", ":"))
+            raw = json.dumps(action, separators=(",", ":"), ensure_ascii=False)
             if mode == "invalid-response":
                 raw = "invalid-json-fixture"
             call_id = str(uuid.uuid4())
@@ -97,14 +101,15 @@ for mode in ["accepted", "invalid-response", "truncated-response", "inference-un
                         "call_id": call_id,
                     },
                 }
+            provider_json = json.dumps(response, ensure_ascii=False)
             requests.append(
                 {
                     "platform_call_id": call_id,
                     "caller_request": body,
-                    "provider_response": json.dumps(response),
+                    "provider_response": provider_json,
                 }
             )
-            payload = json.dumps(response).encode()
+            payload = provider_json.encode("utf-8")
             if mode == "interrupted-started-term":
                 entered.set()
                 release.wait(10)
@@ -201,9 +206,15 @@ for mode in ["accepted", "invalid-response", "truncated-response", "inference-un
                     if mode == "registration" and index == seats - 1:
                         time.sleep(0.8)
                         assert not requests, "Decision requested before final control registration"
+                    operator_prompt = (
+                        "PRIVATE OPERATOR SENTINEL " + ("x" * 3973) + "—"
+                        if mode == "accepted" and index == 0
+                        else "PRIVATE OPERATOR SENTINEL"
+                    )
                     seat.send(
                         json.dumps(
-                            {"type": "prompt", "prompt": "PRIVATE OPERATOR SENTINEL"}
+                            {"type": "prompt", "prompt": operator_prompt},
+                            ensure_ascii=False,
                         )
                     )
                 if mode.startswith("interrupted-"):
@@ -368,6 +379,9 @@ for mode in ["accepted", "invalid-response", "truncated-response", "inference-un
                 selected["accepted"]
                 and selected["parsed_action"] == decision["executed_action"]
             )
+    if mode == "accepted":
+        assert decisions[0]["executed_action"]["say"] == ("A" * 155) + "…"
+        assert decisions[1]["executed_action"]["say"] == ("A" * 154) + "—…"
     assert "PRIVATE OPERATOR SENTINEL" not in (folder / "replay.json").read_text()
     assert "PRIVATE OPERATOR SENTINEL" not in (folder / "game.log").read_text()
     assert "PRIVATE OPERATOR SENTINEL" in (folder / "trajectory.jsonl").read_text()

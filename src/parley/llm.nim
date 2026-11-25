@@ -281,8 +281,7 @@ proc decide*(
       "top_p": 1,
       "reasoning": {"effort": "none"},
       "chat_template_kwargs": {"enable_thinking": false},
-      "response_format": {"type": "json_schema",
-        "json_schema": {"name": "parley_action", "strict": true, "schema": observation["actionSchema"]}},
+      "response_format": {"type": "json_object"},
       "messages": [{"role": "system", "content": observation["input"]["system"]},
         {"role": "user", "content": observation["input"]["user"]}]
     }

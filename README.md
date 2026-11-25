@@ -144,7 +144,7 @@ nim c -d:release -o:bin/parley-player src/parley_player.nim
 Coworld release packaging uses [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
 (`gh workflow run deploy.yml --ref main -f version=<X.Y.Z> -f dry_run=true`; pass `-f dry_run=false` only when publishing an authorized release from `main`).
 
-Native model seats call `/v1/chat/completions` with system and user messages, disabled thinking, `top_p=1`, `COWORLD_LLM_TEMPERATURE=1` default, `maxOutputTokens=1024` manifest default, and strict structured output for the currently legal action schema. Only `finish_reason=stop` produces an action; truncation or refusal retains the received response and fails the seat without executing a partial action. External action players still own generation and must submit a legal action.
+Native model seats call `/v1/chat/completions` with system and user messages, disabled thinking, `top_p=1`, `COWORLD_LLM_TEMPERATURE=1` default, `maxOutputTokens=1024` manifest default, and JSON object output. Include only the side actions you use. For example, a reaction can be just `{"say":"Deal."}`. The engine checks each submitted action. Only `finish_reason=stop` produces an action; truncation or refusal retains the received response and fails the seat without executing a partial action. External action players still own generation and must submit a legal action.
 
 ## Fielding a policy
 

@@ -63,8 +63,7 @@ for mode in ["accepted", "invalid-response", "truncated-response", "inference-un
             assert set(body) == {"model", "messages", "temperature", "top_p", "max_tokens",
                                  "reasoning", "chat_template_kwargs", "response_format"}
             assert body["messages"][0]["role"] == "system"
-            assert body["response_format"]["type"] == "json_schema"
-            assert body["response_format"]["json_schema"]["strict"] is True
+            assert body["response_format"] == {"type": "json_object"}
             assert body["reasoning"] == {"effort": "none"}
             assert body["chat_template_kwargs"] == {"enable_thinking": False}
             user = body["messages"][1]["content"]

@@ -375,6 +375,34 @@
       "env": {
         "PLAYER_SCRIPTED": "1"
       }
+    },
+    {
+      "id": "parley-text",
+      "name": "Parley Text Model",
+      "type": "player",
+      "description": "Native external text-model player over parley.player.v2 using the seat-local LLM sidecar (COWORLD_LLM_ENDPOINT / COWORLD_LLM_MODEL) and explicit strategy prompt.",
+      "image": "{{PARLEY_TEXT_IMAGE}}",
+      "run": [
+        "python",
+        "-m",
+        "coworld.examples.parley.player"
+      ],
+      "resources": {
+        "requests": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        },
+        "limits": {
+          "cpu": "1"
+        }
+      },
+      "source_url": "https://github.com/softmax-universe/cogame-parley/tree/main",
+      "env": {
+        "COWORLD_LLM_ENABLED": "true",
+        "COWORLD_LLM_MODEL": "anthropic/claude-haiku-4.5",
+        "PARLEY_OPERATOR_PROMPT": "Play to win, but make it fun. Your secret cards run the round: steer shots toward your ENEMY without being obvious about it (land at least one hit on them yourself to earn its point), quietly keep your FRIEND alive, and never reveal either card out loud. Shoot whoever threatens you or your friend most, and aim for the head when you mean it. Shoot from the hip when you want the gun to move without the damage - handing it to your friend, or staging a grudge the table will believe - since nobody learns how you aimed, only whether it landed. Keep your table talk short, funny, and a little scheming - propose truces you may or may not honor, and let the table do your dirty work when it will. Whisper to firm up a private deal, show a card when proof would win you an ally, pledge when a public promise buys you safety, and pay a point when a bribe is cheaper than a loss.",
+        "PARLEY_INFERENCE": "{\"top_p\": null, \"output_format\": \"text\", \"output_tokens\": 1024}"
+      }
     }
   ],
   "variants": [
@@ -413,8 +441,8 @@
   "certification": {
     "game_config": {
       "sampled": true,
-      "episodeTimeoutSeconds": 120,
-      "llmTimeoutSeconds": 5,
+      "episodeTimeoutSeconds": 300,
+      "llmTimeoutSeconds": 30,
       "players": [
         {
           "name": "Sprocket"
@@ -454,7 +482,7 @@
         "player_id": "parley-scripted"
       },
       {
-        "player_id": "parley-scripted"
+        "player_id": "parley-text"
       }
     ]
   }

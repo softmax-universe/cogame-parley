@@ -37,7 +37,9 @@ jobs:
         run: |
           set -euo pipefail
           nim c -d:release --threads:on -d:ParleyGameVersion=source-fixture -d:ParleySourceRevision="$GITHUB_SHA" --path:src -o:/tmp/parley-game src/parley.nim
+          nim c -d:release --path:src -o:/tmp/parley-player src/parley_player.nim
           uv run --no-project --with 'websockets==15.0.1' python tools/test_native_trajectory.py /tmp/parley-game "$RUNNER_TEMP/private-trajectory-proof" "$GITHUB_SHA"
+          uv run --no-project --with 'httpx==0.28.1' --with 'pydantic==2.12.3' --with 'websockets==16.1.1' python tools/test_parley_text_player.py /tmp/parley-game /tmp/parley-player "$RUNNER_TEMP/parley-text-proof"
       - name: Verify policy failures never execute fallback actions
         run: |
           set -euo pipefail

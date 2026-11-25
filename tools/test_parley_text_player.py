@@ -177,8 +177,16 @@ async def run_fixture_episode(
     captures = read_capture_archive((output_dir / f"player-{text_slot}.zip").read_bytes())
     assert len(captures) == len(calls), f"captures {len(captures)} != calls {len(calls)}"
     trajectory = [json.loads(line) for line in (output_dir / "trajectory.jsonl").read_text().splitlines() if line.strip()]
-    llm_decisions = [row for row in trajectory if row.get("seat") == text_slot and row.get("origin") == "llm"]
-    assert len(llm_decisions) == len(calls), f"trajectory llm decisions {len(llm_decisions)} != calls {len(calls)}"
+    decisions = trajectory[:-1]
+    model_attempts = [
+        attempt
+        for decision in decisions
+        for attempt in decision.get("attempts", [])
+        if attempt.get("origin") == "model" and attempt.get("accepted") is True
+    ]
+    assert len(model_attempts) == len(calls), f"trajectory model attempts {len(model_attempts)} != calls {len(calls)}"
+    if fenced:
+        assert all(attempt["response"].startswith("```json\n") for attempt in model_attempts)
     return {
         "mode": "fenced" if fenced else "bare",
         "calls": len(calls),

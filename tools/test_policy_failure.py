@@ -25,6 +25,10 @@ async def main():
         "tokens": [str(i) for i in range(5)],
         "players": [{"name": f"diagnostic-{i}"} for i in range(5)],
     }
+    if mode == "timeout":
+        config["llmTimeoutSeconds"] = 5
+    elif mode == "rejected":
+        config["episodeTimeoutSeconds"] = 100
     (root / "config.json").write_text(json.dumps(config))
     env = dict(os.environ)
     env.pop("COWORLD_LLM_ENDPOINT", None)
@@ -86,6 +90,12 @@ async def main():
                         packet = json.loads(raw)
                         if packet["type"] == "decision":
                             latest = packet["decision_id"]
+                            if not rejected:
+                                budget = packet["transport"]["budget_ms"]
+                                if mode == "timeout":
+                                    assert 0 < budget <= 5000, budget
+                                elif mode == "rejected":
+                                    assert 45000 < budget <= 60000, budget
                             if rejected and not following:
                                 following.append(time.monotonic() - rejected[0][1])
                             observation = packet["observation"]

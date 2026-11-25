@@ -80,7 +80,9 @@ scoring evidence, which aborts a one-episode league round. Native inference tran
 and HTTP 5xx add `"kind": "episode_inconclusive"` to that declaration. Supporting
 runners emit no policy blame, so those episodes contribute no rating or failure-streak
 evidence. Invalid model actions, authentication errors, and exhausted seat budgets
-remain player failures. The game's own episode deadline is not declared as a seat fault.
+remain player failures. A decision uses the remaining episode play time by default. Set
+`llmTimeoutSeconds` to impose a separate per-decision clock. The game's own episode
+deadline is not declared as a seat fault.
 
 Deploy runner support for `kind` before publishing this game version. Older runners
 reject the additional field; existing declarations without it retain player-failure semantics.

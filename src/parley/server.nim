@@ -193,11 +193,10 @@ proc registerExternal(gs: var GameState, slot: int, prompt: string) =
 
 proc decideSeat(client: LlmClient, sim: Sim, seat: int, policy: SeatPolicy,
     wantShot: bool, observation: JsonNode,
-    playDeadline: MonoTime): DecisionResult =
+    playDeadline, decisionDeadline: MonoTime): DecisionResult =
   if getMonoTime() >= playDeadline:
     result.failure = some(dfEpisodeDeadline)
     return
-  let decisionDeadline = min(playDeadline, getMonoTime() + initDuration(seconds = state.config.llmTimeoutSeconds))
   case policy.kind
   of pkUnregistered:
     result.failure = some(dfMissingPolicy)
@@ -596,16 +595,20 @@ proc playDecision(client: LlmClient, seat: int, wantShot: bool,
   var sim: Sim
   var policy: SeatPolicy
   var observation: JsonNode
-  if getMonoTime() < playDeadline:
-    batchControl("turn", int((episodeDeadline - getMonoTime()).inMilliseconds),
-      $(state.decisionRefs.len + 1), seat,
-      max(1, min(state.config.llmTimeoutSeconds * 1000,
-        int((playDeadline - getMonoTime()).inMilliseconds))))
+  let now = getMonoTime()
+  let decisionDeadline =
+    if state.config.llmTimeoutSeconds > 0:
+      min(playDeadline, now + initDuration(seconds = state.config.llmTimeoutSeconds))
+    else:
+      playDeadline
+  if now < playDeadline:
+    batchControl("turn", int((episodeDeadline - now).inMilliseconds),
+      $(state.decisionRefs.len + 1), seat, max(1, int((decisionDeadline - now).inMilliseconds)))
   withLock stateLock:
     sim = state.match.decisionSim()
     policy = state.policies[seat]
     observation = state.decisionObservation(sim, seat, policy.prompt, wantShot, state.match.matchHeader())
-  let outcome = client.decideSeat(sim, seat, policy, wantShot, observation, playDeadline)
+  let outcome = client.decideSeat(sim, seat, policy, wantShot, observation, playDeadline, decisionDeadline)
   if policy.kind != pkExternal:
     observation = observation["observation"]
   withLock stateLock:

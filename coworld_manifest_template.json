@@ -135,10 +135,10 @@
           "default": 1024
         },
         "llmTimeoutSeconds": {
+          "description": "Optional limit for each decision in seconds. By default, each decision uses the remaining episode play time.",
           "type": "integer",
           "minimum": 5,
-          "maximum": 300,
-          "default": 45
+          "maximum": 300
         },
         "player_connect_timeout_seconds": {
           "type": "number",
@@ -442,7 +442,6 @@
     "game_config": {
       "sampled": true,
       "episodeTimeoutSeconds": 300,
-      "llmTimeoutSeconds": 30,
       "players": [
         {
           "name": "Sprocket"

@@ -168,7 +168,8 @@ suite "scripted seat randomness":
     let initialPrompt = userPrompt(match.decisionSim(), seat, "",
       match.sim.actionOptions(seat, true), match.matchHeader())
     check "Your active pledges this round:" notin initialPrompt
-    check "omit unused fields or set them to null" in initialPrompt
+    check "omit unused fields" in initialPrompt
+    check "set them to null" notin initialPrompt
     check "new pledge this round only" in initialPrompt
 
     match.sim.applyExtras(seat, Extras(pledgeTo: some(firstTarget)))

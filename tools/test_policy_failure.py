@@ -201,7 +201,7 @@ async def main():
                     assert len(failed["attempts"]) == 1
                     assert failed["attempts"][0]["rejection_reason"]
                     if mode in {"rejected", "missing-side-target"}:
-                        assert "whisper names no cog" in failed["attempts"][0]["rejection_reason"]
+                        assert "whisper.to must be a nonempty string" in failed["attempts"][0]["rejection_reason"]
                 expected = {
                     "missing-endpoint": "missing_native_endpoint",
                     "disconnect": "external_disconnect",

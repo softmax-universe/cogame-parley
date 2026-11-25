@@ -219,7 +219,7 @@ proc extrasInstruction(options: JsonNode): string =
       pledgeable.join(", ") & ">")
   if fields.len == 0:
     return ""
-  "Optional extra fields (omit unused fields): " &
+  "Optional side actions: " &
     fields.join("; ") & ".\n"
 
 proc shotInstruction(sim: Sim, options: JsonNode): string =

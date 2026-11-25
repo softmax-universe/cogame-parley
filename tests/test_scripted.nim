@@ -104,6 +104,23 @@ suite "scripted seat randomness":
     let sparse = %*{"say": "steady", "shoot": "pass"}
     check decisionAction(sim, parseDecision(sim, seat, sparse, true), true) == sparse
 
+    var explicitNull = sparse.copy()
+    for field in ["pledge", "give", "whisper", "reveal"]:
+      explicitNull[field] = newJNull()
+    check decisionAction(sim, parseDecision(sim, seat, explicitNull, true), true) == sparse
+    check decisionAction(sim, parseDecision(sim, seat, %*{"say": "ok", "whisper": nil}, false), false) == %*{"say": "ok"}
+
+    for (invalid, message) in [
+        (%*{"whisper": "Bogus"}, "whisper must be an object"),
+        (%*{"whisper": {}}, "whisper.to must be a nonempty string"),
+        (%*{"reveal": {"to": "Bogus", "card": "friend"}}, "reveal.to names no cog: Bogus"),
+        (%*{"give": {}}, "give must be a cog name")]:
+      try:
+        discard parseDecision(sim, seat, invalid, false)
+        check false
+      except ParleyError as error:
+        check error.msg == message
+
     for field in ["pledge", "give", "whisper", "reveal"]:
       var bad = %*{"say": "steady", "shoot": "pass"}
       bad[field] = %"Bogus"
@@ -139,7 +156,7 @@ suite "scripted seat randomness":
     let initialPrompt = userPrompt(match.decisionSim(), seat, "",
       match.sim.actionOptions(seat, true), match.matchHeader())
     check "Your active pledges this round:" notin initialPrompt
-    check "omit unused fields" in initialPrompt
+    check "Optional side actions" in initialPrompt
     check "set them to null" notin initialPrompt
     check "new pledge this round only" in initialPrompt
 

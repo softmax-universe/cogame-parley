@@ -192,7 +192,7 @@ The platform owns cross-user model leases, worker allocation, cancellation, boun
 Each XP keeps its own coordinator. A slow, unstarted, or failed game never blocks a ready peer's inference.
 Publish and qualify compatible game and checkpoint images before production collection.
 
-External players receive the same action instructions and legal choices as native seats. Omit unused side actions.
+External players receive the same action instructions and legal choices as native seats. Unused side actions can be omitted or set to JSON `null`.
 
 Qualify the complete cohort after changing serving code. For each completed game, verify
 `replay.config.rounds == replay.config.plannedRounds`, five scores, and exact trajectory/private-capture joins.

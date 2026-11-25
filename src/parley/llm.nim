@@ -164,25 +164,45 @@ proc cleanSay(text: string): string =
   result.add("…")
 
 proc parseExtras(sim: Sim, seat: int, payload: JsonNode): Extras =
+  proc optional(field: string, kind: JsonNodeKind): JsonNode =
+    let value = payload{field}
+    if value.isNil or value.kind == JNull:
+      return nil
+    if value.kind != kind:
+      let expected = if kind == JObject: "an object" else: "a cog name"
+      raise newException(ParleyError, field & " must be " & expected)
+    value
+
+  proc text(node: JsonNode, field: string): string =
+    if node.isNil or node.kind != JString or node.getStr().strip().len == 0:
+      raise newException(ParleyError, field & " must be a nonempty string")
+    node.getStr()
+
   proc cog(node: JsonNode, field: string): Option[int] =
-    let name = node.getStr()
+    let name = text(node, field)
     let recipient = sim.seatByName(name)
     if recipient < 0:
       raise newException(ParleyError, field & " names no cog: " & name)
     some(recipient)
 
-  if payload.hasKey("whisper"):
-    let whisper = payload["whisper"]
-    result.whisperTo = cog(whisper{"to"}, "whisper")
-    result.whisperText = cleanSay(whisper{"text"}.getStr())
-  if payload.hasKey("reveal"):
-    let reveal = payload["reveal"]
-    result.revealTo = cog(reveal{"to"}, "reveal")
-    result.revealCard = parseEnum[CardKind](reveal{"card"}.getStr())
-  if payload.hasKey("give"):
-    result.giveTo = cog(payload["give"], "give")
-  if payload.hasKey("pledge"):
-    result.pledgeTo = cog(payload["pledge"], "pledge")
+  let whisper = optional("whisper", JObject)
+  if not whisper.isNil:
+    result.whisperTo = cog(whisper{"to"}, "whisper.to")
+    result.whisperText = cleanSay(text(whisper{"text"}, "whisper.text"))
+  let reveal = optional("reveal", JObject)
+  if not reveal.isNil:
+    result.revealTo = cog(reveal{"to"}, "reveal.to")
+    let card = text(reveal{"card"}, "reveal.card")
+    case card
+    of "friend": result.revealCard = cardFriend
+    of "enemy": result.revealCard = cardEnemy
+    else: raise newException(ParleyError, "reveal.card must be friend or enemy")
+  let give = optional("give", JString)
+  if not give.isNil:
+    result.giveTo = cog(give, "give")
+  let pledge = optional("pledge", JString)
+  if not pledge.isNil:
+    result.pledgeTo = cog(pledge, "pledge")
   sim.validateExtras(seat, result)
 
 proc parseDecision*(sim: Sim, seat: int, payload: JsonNode,

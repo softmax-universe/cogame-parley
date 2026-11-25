@@ -141,30 +141,6 @@ proc parseJsonObject*(text: string): JsonNode =
   if result.kind != JObject:
     raise newException(ParleyError, "response must be a JSON object")
 
-proc actionSchema*(options: JsonNode): JsonNode =
-  var properties = %*{"say": {"type": "string"}}
-  if options["phase"].getStr() == "shot":
-    var targets = newJArray()
-    for action in options["legalActions"]:
-      if action{"aim"}.getStr() == "head": targets.add(action["shoot"])
-    if options["legalActions"][0]["shoot"].getStr() == "pass": targets.add(%"pass")
-    properties["shoot"] = %*{"type": "string", "enum": targets}
-    properties["aim"] = %*{"type": "string", "enum": ["head", "hip"]}
-  for name, allowance in options["extras"]:
-    let targets = allowance["to"]
-    if targets.len == 0: continue
-    var field = %*{"type": "string", "enum": targets}
-    if name in ["whisper", "reveal"]:
-      let detail = if name == "whisper": "text" else: "card"
-      field = %*{"type": "object", "additionalProperties": false, "required": ["to", detail],
-        "properties": {"to": {"type": "string", "enum": targets}}}
-      field["properties"][detail] = if name == "whisper": %*{"type": "string"}
-        else: %*{"type": "string", "enum": allowance["cards"]}
-    properties[name] = %*{"anyOf": [{"type": "null"}, field]}
-  var required = newJArray()
-  for key, value in properties: required.add(%key)
-  %*{"type": "object", "properties": properties, "required": required, "additionalProperties": false}
-
 proc cleanSay(text: string): string =
   if validateUtf8(text) != -1:
     raise newException(ParleyError, "speech is not valid UTF-8")
@@ -184,40 +160,25 @@ proc cleanSay(text: string): string =
   result.add("…")
 
 proc parseExtras(sim: Sim, seat: int, payload: JsonNode): Extras =
-  ## Absent, null, or blank/sentinel optional fields are unused; present ones must name a cog.
-  proc isUnused(node: JsonNode): bool =
-    node == nil or node.kind == JNull or
-      (node.kind == JString and node.getStr().strip().toLowerAscii() in ["", "null", "none"])
   proc cog(node: JsonNode, field: string): Option[int] =
-    let name = node.getStr().strip()
-    let seat = sim.seatByName(name)
-    if seat < 0:
+    let name = node.getStr()
+    let recipient = sim.seatByName(name)
+    if recipient < 0:
       raise newException(ParleyError, field & " names no cog: " & name)
-    some(seat)
-  let whisper = payload{"whisper"}
-  if not isUnused(whisper) and
-      not (whisper.kind == JObject and
-        (whisper.len == 0 or
-          (whisper.hasKey("to") and isUnused(whisper["to"])) or
-          (not whisper.hasKey("to") and isUnused(whisper{"text"})))):
-    let targetNode = if whisper.kind == JObject: whisper{"to"} else: whisper
-    result.whisperTo = cog(targetNode, "whisper")
+    some(recipient)
+
+  if payload.hasKey("whisper"):
+    let whisper = payload["whisper"]
+    result.whisperTo = cog(whisper{"to"}, "whisper")
     result.whisperText = cleanSay(whisper{"text"}.getStr())
-  let reveal = payload{"reveal"}
-  if not isUnused(reveal) and
-      not (reveal.kind == JObject and
-        (reveal.len == 0 or
-          (reveal.hasKey("to") and isUnused(reveal["to"])) or
-          (not reveal.hasKey("to") and isUnused(reveal{"card"})))):
-    let targetNode = if reveal.kind == JObject: reveal{"to"} else: reveal
-    result.revealTo = cog(targetNode, "reveal")
-    result.revealCard = parseEnum[CardKind](reveal{"card"}.getStr().strip().toLowerAscii())
-  let give = payload{"give"}
-  if not isUnused(give):
-    result.giveTo = cog(give, "give")
-  let pledge = payload{"pledge"}
-  if not isUnused(pledge):
-    result.pledgeTo = cog(pledge, "pledge")
+  if payload.hasKey("reveal"):
+    let reveal = payload["reveal"]
+    result.revealTo = cog(reveal{"to"}, "reveal")
+    result.revealCard = parseEnum[CardKind](reveal{"card"}.getStr())
+  if payload.hasKey("give"):
+    result.giveTo = cog(payload["give"], "give")
+  if payload.hasKey("pledge"):
+    result.pledgeTo = cog(payload["pledge"], "pledge")
   sim.validateExtras(seat, result)
 
 proc parseDecision*(sim: Sim, seat: int, payload: JsonNode,

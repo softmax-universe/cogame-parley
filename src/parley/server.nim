@@ -182,7 +182,6 @@ proc decisionObservation(gs: GameState, sim: Sim, seat: int, prompt: string,
     "observation": view,
     "input": {"system": system, "user": user},
     "legalActions": options["legalActions"],
-    "actionSchema": actionSchema(options),
     "extras": options["extras"]}
 
 proc registerExternal(gs: var GameState, slot: int, prompt: string) =

@@ -72,10 +72,11 @@ suite "scripted seat randomness":
     let seat = match.sim.itSeat
     let other = (seat + 1) mod 4
     let name = match.sim.seats[other].name
-    let payload = %*{"say": "deal?", "shoot": "pass",
+    var payload = %*{"say": "deal?", "shoot": "pass",
       "whisper": {"to": name, "text": "spare me"},
       "reveal": {"to": name, "card": "enemy"},
-      "pledge": name, "give": (if seat == 0: %name else: newJNull())}
+      "pledge": name}
+    if seat == 0: payload["give"] = %name
     let decision = parseDecision(match.sim, seat, payload, true)
     let proposed = decisionAction(match.sim, decision, true)
     let before = match.allEvents().len
@@ -94,44 +95,14 @@ suite "scripted seat randomness":
     check "shows " & name & " one of their cards" in view
     check "spare me" in userPrompt(match.decisionSim(), other, "", match.sim.actionOptions(other, false), "")
 
-  test "blank and null-sentinel strings on optional extras are treated as unused":
+  test "omit unused side actions and name a recipient for each supplied side action":
     var config = defaultGameConfig()
     for seat in 0 ..< 4:
       config.players.add(PlayerConfig(name: "P" & $seat))
     let sim = initSim(config)
     let seat = sim.itSeat
-    for sentinel in ["", "  ", "null", "NULL", "none", "None"]:
-      let decision = parseDecision(sim, seat, %*{
-        "say": "steady",
-        "shoot": "pass",
-        "pledge": sentinel,
-        "give": sentinel,
-        "whisper": sentinel,
-        "reveal": sentinel
-      }, true)
-      check decision.skip
-      check decision.extras.pledgeTo.isNone
-      check decision.extras.giveTo.isNone
-      check decision.extras.whisperTo.isNone
-      check decision.extras.revealTo.isNone
-
-      let nested = parseDecision(sim, seat, %*{
-        "say": "steady",
-        "shoot": "pass",
-        "whisper": {"to": sentinel, "text": ""},
-        "reveal": {"to": sentinel, "card": "friend"}
-      }, true)
-      check nested.extras.whisperTo.isNone
-      check nested.extras.revealTo.isNone
-
-    let nullNested = parseDecision(sim, seat, %*{
-      "say": "steady",
-      "shoot": "pass",
-      "whisper": {"to": newJNull(), "text": ""},
-      "reveal": {"to": newJNull(), "card": "enemy"}
-    }, true)
-    check nullNested.extras.whisperTo.isNone
-    check nullNested.extras.revealTo.isNone
+    let sparse = %*{"say": "steady", "shoot": "pass"}
+    check decisionAction(sim, parseDecision(sim, seat, sparse, true), true) == sparse
 
     for field in ["pledge", "give", "whisper", "reveal"]:
       var bad = %*{"say": "steady", "shoot": "pass"}

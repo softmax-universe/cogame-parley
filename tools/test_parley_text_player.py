@@ -76,10 +76,12 @@ async def run_fixture_episode(
             assert "response_format" not in body
             user_prompt = body["messages"][1]["content"]
             target = re.search(r'<one of "([^"]+)"', user_prompt)
-            action: dict[str, str] = {"say": "Playing for the win."}
+            action: dict[str, str | None] = {"say": "Playing for the win."}
             if target:
                 action["shoot"] = target.group(1)
                 action["aim"] = "head"
+            if fenced:
+                action.update(whisper=None, reveal=None, pledge=None, give=None)
             content = f"```json\n{json.dumps(action)}\n```" if fenced else json.dumps(action)
             payload = {
                 "id": f"chatcmpl-fixture-{len(calls)}",

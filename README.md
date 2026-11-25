@@ -192,11 +192,7 @@ The platform owns cross-user model leases, worker allocation, cancellation, boun
 Each XP keeps its own coordinator. A slow, unstarted, or failed game never blocks a ready peer's inference.
 Publish and qualify compatible game and checkpoint images before production collection.
 
-External Qwen players keep model-only JSON decoding unless their policy explicitly sets `PARLEY_DECODING=legal-actions`.
-The constrained variant sends this game's per-decision `actionSchema` to inference, excluding self and eliminated targets.
-Register and compare it as a distinct policy variant; preserve the schema in private captures.
-Metta's model-only training importer rejects constrained captures, so enabling this mode does not qualify them for that importer.
-Neither mode repairs or substitutes a model response after generation. Invalid actions remain explicit policy failures.
+External players receive the same action instructions and legal choices as native seats. Omit unused side actions.
 
 Qualify the complete cohort after changing serving code. For each completed game, verify
 `replay.config.rounds == replay.config.plannedRounds`, five scores, and exact trajectory/private-capture joins.

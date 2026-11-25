@@ -52,7 +52,7 @@ async def main():
                 "model": request["model"],
                 "choices": [
                     {
-                        "message": {"content": json.dumps(action)},
+                        "message": {"content": f"```json\n{json.dumps(action)}\n```" if mode == "fenced" else json.dumps(action)},
                         "finish_reason": "length" if mode == "truncated" else "stop",
                     }
                 ],
@@ -109,7 +109,7 @@ async def main():
         "tokens": ["owned-private-seat-" + str(i) for i in range(5)],
         "players": [{"name": "diagnostic-" + str(i)} for i in range(5)],
     }
-    if mode == "large-metadata":
+    if mode in {"large-metadata", "fenced"}:
         config.update(
             sampled=True,
             rounds=1,
@@ -305,6 +305,8 @@ async def main():
             if attempt["origin"] == "model"
         ]
         assert len(attempts) == len(calls) > 0
+        if mode == "fenced":
+            assert all(attempt["response"].startswith("```json\n") for attempt in attempts)
         if mode == "large-metadata":
             assert all(
                 attempt["prompt_token_ids"] == list(range(32768))

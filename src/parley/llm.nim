@@ -136,8 +136,12 @@ proc scriptedReaction*(client: LlmClient, sim: Sim, seat: int): Decision =
   )
 
 proc parseJsonObject*(text: string): JsonNode =
-  ## Training labels must contain only the requested action object.
-  result = parseJson(text)
+  let lines = text.strip().splitLines()
+  let body = if lines.len >= 3 and lines[0].toLowerAscii() in ["```", "```json"] and lines[^1] == "```":
+    lines[1 .. ^2].join("\n")
+  else:
+    text
+  result = parseJson(body)
   if result.kind != JObject:
     raise newException(ParleyError, "response must be a JSON object")
 

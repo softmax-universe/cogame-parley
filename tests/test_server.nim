@@ -17,6 +17,7 @@ suite "player state":
 
   test "internal model actions reject prose around JSON":
     check parseJsonObject("  {\"say\": \"truce\"}  ")["say"].getStr() == "truce"
+    check parseJsonObject("```json\n{\"say\": \"truce\"}\n```")["say"].getStr() == "truce"
     expect JsonParsingError:
       discard parseJsonObject("I choose {\"say\": \"truce\"}")
 
